@@ -1,0 +1,6 @@
+{
+  "name": "LankaGas Live",
+  "description": "Real-time Sri Lanka LPG cylinder stock and queue tracker for Litro and LAUGFS outlets across Consumer, Seller, and Admin roles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

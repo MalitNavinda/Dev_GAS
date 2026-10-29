@@ -1,0 +1,361 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Default-Deny Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Hardened Global Primitives ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        ('email' in request.auth.token &&
+         'email_verified' in request.auth.token &&
+         request.auth.token.email == 'malith.mudunkotuwa@gmail.com' &&
+         request.auth.token.email_verified == true) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isBrand(val) {
+      return val is string && (val == 'LITRO' || val == 'LAUGFS');
+    }
+
+    function isStockStatus(val) {
+      return val is string && (val == 'SCHEDULED' || val == 'IN_TRANSIT' || val == 'AVAILABLE' || val == 'SOLD_OUT');
+    }
+
+    function isQueueLevel(val) {
+      return val is string && (val == 'NONE' || val == 'SHORT' || val == 'MODERATE' || val == 'LONG');
+    }
+
+    // --- Entity Validation Blueprints ---
+
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['userId', 'grantedBy', 'createdAt']) &&
+             data.keys().hasOnly(['userId', 'grantedBy', 'createdAt']) &&
+             isValidId(data.userId) &&
+             isValidId(data.grantedBy) &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['userId', 'displayName', 'preferredLanguage', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['userId', 'displayName', 'preferredLanguage', 'createdAt', 'updatedAt']) &&
+             isValidId(data.userId) &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80 &&
+             data.preferredLanguage is string && (data.preferredLanguage == 'EN' || data.preferredLanguage == 'SI' || data.preferredLanguage == 'TA') &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidWatchlistItem(data) {
+      return data.keys().hasAll(['userId', 'stationId', 'stationName', 'brand', 'desiredSize', 'lastKnownStatus', 'createdAt', 'updatedAt']) &&
+             data.keys().hasOnly(['userId', 'stationId', 'stationName', 'brand', 'desiredSize', 'lastKnownStatus', 'createdAt', 'updatedAt']) &&
+             isValidId(data.userId) &&
+             isValidId(data.stationId) &&
+             data.stationName is string && data.stationName.size() >= 2 && data.stationName.size() <= 100 &&
+             isBrand(data.brand) &&
+             data.desiredSize is string && (data.desiredSize == 'ANY' || data.desiredSize == '12_5KG' || data.desiredSize == '5KG' || data.desiredSize == '2_3KG') &&
+             isStockStatus(data.lastKnownStatus) &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidDistributor(data) {
+      return data.keys().hasAll([
+               'ownerId', 'ownerName', 'name', 'brand', 'district', 'town', 'address', 'phone',
+               'latitude', 'longitude', 'geohash', 'visibility', 'isVerified', 'status',
+               'stock12_5kg', 'stock5kg', 'stock2_3kg', 'nextArrivalNote', 'queueLevel',
+               'estimatedQueueCount', 'confirmationsCount', 'discrepancyCount', 'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'ownerId', 'ownerName', 'name', 'brand', 'district', 'town', 'address', 'phone',
+               'latitude', 'longitude', 'geohash', 'visibility', 'isVerified', 'status',
+               'stock12_5kg', 'stock5kg', 'stock2_3kg', 'nextArrivalNote', 'queueLevel',
+               'estimatedQueueCount', 'confirmationsCount', 'discrepancyCount', 'createdAt', 'updatedAt'
+             ]) &&
+             isValidId(data.ownerId) &&
+             data.ownerName is string && data.ownerName.size() >= 1 && data.ownerName.size() <= 80 &&
+             data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+             isBrand(data.brand) &&
+             data.district is string && data.district.size() >= 2 && data.district.size() <= 40 &&
+             data.town is string && data.town.size() >= 2 && data.town.size() <= 60 &&
+             data.address is string && data.address.size() >= 3 && data.address.size() <= 160 &&
+             data.phone is string && data.phone.size() >= 7 && data.phone.size() <= 20 &&
+             (data.latitude is float || data.latitude is int) && data.latitude >= -90.0 && data.latitude <= 90.0 &&
+             (data.longitude is float || data.longitude is int) && data.longitude >= -180.0 && data.longitude <= 180.0 &&
+             data.geohash is string && data.geohash.size() >= 4 && data.geohash.size() <= 12 &&
+             data.visibility is string && (data.visibility == 'PUBLIC' || data.visibility == 'PRIVATE' || data.visibility == 'SUSPENDED') &&
+             data.isVerified is bool &&
+             isStockStatus(data.status) &&
+             data.stock12_5kg is int && data.stock12_5kg >= 0 && data.stock12_5kg <= 10000 &&
+             data.stock5kg is int && data.stock5kg >= 0 && data.stock5kg <= 10000 &&
+             data.stock2_3kg is int && data.stock2_3kg >= 0 && data.stock2_3kg <= 10000 &&
+             data.nextArrivalNote is string && data.nextArrivalNote.size() <= 120 &&
+             isQueueLevel(data.queueLevel) &&
+             data.estimatedQueueCount is int && data.estimatedQueueCount >= 0 && data.estimatedQueueCount <= 1000 &&
+             data.confirmationsCount is int && data.confirmationsCount >= 0 && data.confirmationsCount <= 1000000 &&
+             data.discrepancyCount is int && data.discrepancyCount >= 0 && data.discrepancyCount <= 1000000 &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidStockLog(data) {
+      return data.keys().hasAll([
+               'stationId', 'actorId', 'stationName', 'brand', 'previousStatus', 'newStatus',
+               'stock12_5kg', 'stock5kg', 'stock2_3kg', 'note', 'visibility', 'createdAt'
+             ]) &&
+             data.keys().hasOnly([
+               'stationId', 'actorId', 'stationName', 'brand', 'previousStatus', 'newStatus',
+               'stock12_5kg', 'stock5kg', 'stock2_3kg', 'note', 'visibility', 'createdAt'
+             ]) &&
+             isValidId(data.stationId) &&
+             isValidId(data.actorId) &&
+             data.stationName is string && data.stationName.size() >= 2 && data.stationName.size() <= 100 &&
+             isBrand(data.brand) &&
+             isStockStatus(data.previousStatus) &&
+             isStockStatus(data.newStatus) &&
+             data.stock12_5kg is int && data.stock12_5kg >= 0 && data.stock12_5kg <= 10000 &&
+             data.stock5kg is int && data.stock5kg >= 0 && data.stock5kg <= 10000 &&
+             data.stock2_3kg is int && data.stock2_3kg >= 0 && data.stock2_3kg <= 10000 &&
+             data.note is string && data.note.size() <= 160 &&
+             data.visibility is string && (data.visibility == 'PUBLIC' || data.visibility == 'PRIVATE') &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidQueueReport(data) {
+      return data.keys().hasAll([
+               'stationId', 'stationName', 'userId', 'reporterAlias', 'reportedStatus',
+               'queueLevel', 'queueLengthEstimate', 'isProximityVerified', 'weight',
+               'moderationState', 'comment', 'createdAt', 'updatedAt'
+             ]) &&
+             data.keys().hasOnly([
+               'stationId', 'stationName', 'userId', 'reporterAlias', 'reportedStatus',
+               'queueLevel', 'queueLengthEstimate', 'isProximityVerified', 'weight',
+               'moderationState', 'comment', 'createdAt', 'updatedAt'
+             ]) &&
+             isValidId(data.stationId) &&
+             data.stationName is string && data.stationName.size() >= 2 && data.stationName.size() <= 100 &&
+             isValidId(data.userId) &&
+             data.reporterAlias is string && data.reporterAlias.size() >= 1 && data.reporterAlias.size() <= 60 &&
+             data.reportedStatus is string && (data.reportedStatus == 'AVAILABLE' || data.reportedStatus == 'LOW_STOCK' || data.reportedStatus == 'SOLD_OUT') &&
+             isQueueLevel(data.queueLevel) &&
+             data.queueLengthEstimate is int && data.queueLengthEstimate >= 0 && data.queueLengthEstimate <= 500 &&
+             data.isProximityVerified is bool &&
+             data.weight is int && data.weight >= 1 && data.weight <= 3 &&
+             data.moderationState is string && (data.moderationState == 'ACTIVE' || data.moderationState == 'FLAGGED' || data.moderationState == 'DISMISSED') &&
+             data.comment is string && data.comment.size() <= 160 &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    // --- Collection Match Blocks ---
+
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && (request.auth.uid == adminId || isAdmin());
+      allow list: if false;
+      allow create: if isSignedIn() &&
+                       isValidId(adminId) &&
+                       isValidAdminRecord(incoming()) &&
+                       incoming().userId == adminId &&
+                       incoming().grantedBy == request.auth.uid &&
+                       incoming().createdAt <= request.time &&
+                       isAdmin();
+      allow update: if isSignedIn() &&
+                       isValidId(adminId) &&
+                       isValidAdminRecord(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isAdmin() &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['grantedBy']);
+      allow delete: if isSignedIn() && isValidId(adminId) && isAdmin();
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if false;
+
+      allow create: if isSignedIn() &&
+                       isValidId(userId) &&
+                       request.auth.uid == userId &&
+                       isValidUserProfile(incoming()) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt <= request.time;
+
+      allow update: if isSignedIn() &&
+                       isValidId(userId) &&
+                       isValidUserProfile(incoming()) &&
+                       request.auth.uid == userId &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt <= request.time &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'preferredLanguage', 'updatedAt']);
+
+      allow delete: if isSignedIn() && isValidId(userId) && request.auth.uid == userId;
+
+      match /watchlist/{stationId} {
+        allow get: if isSignedIn() && isValidId(userId) && isValidId(stationId) && request.auth.uid == userId;
+        allow list: if isSignedIn() && request.auth.uid == userId && existing().userId == request.auth.uid;
+
+        allow create: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(stationId) &&
+                         request.auth.uid == userId &&
+                         isValidWatchlistItem(incoming()) &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().stationId == stationId &&
+                         incoming().createdAt <= request.time &&
+                         incoming().updatedAt <= request.time &&
+                         exists(/databases/$(database)/documents/distributors/$(stationId));
+
+        allow update: if isSignedIn() &&
+                         isValidId(userId) &&
+                         isValidId(stationId) &&
+                         isValidWatchlistItem(incoming()) &&
+                         request.auth.uid == userId &&
+                         incoming().userId == existing().userId &&
+                         incoming().stationId == existing().stationId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().updatedAt <= request.time &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['desiredSize', 'lastKnownStatus', 'updatedAt']);
+
+        allow delete: if isSignedIn() && isValidId(userId) && isValidId(stationId) && request.auth.uid == userId;
+      }
+    }
+
+    match /distributors/{stationId} {
+      allow get: if isSignedIn() &&
+                    isValidId(stationId) &&
+                    (existing().visibility == 'PUBLIC' || existing().ownerId == request.auth.uid || isAdmin());
+
+      allow list: if isSignedIn() &&
+                     (existing().visibility == 'PUBLIC' || existing().ownerId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(stationId) &&
+                       isValidDistributor(incoming()) &&
+                       incoming().ownerId == request.auth.uid &&
+                       incoming().visibility != 'SUSPENDED' &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt <= request.time &&
+                       (incoming().isVerified == false || isAdmin());
+
+      allow update: if isSignedIn() &&
+                       isValidId(stationId) &&
+                       isValidDistributor(incoming()) &&
+                       incoming().ownerId == existing().ownerId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt <= request.time && (
+                         // Action 1: Seller updates their own outlet stock, ETA, and queue status
+                         (existing().ownerId == request.auth.uid &&
+                          existing().visibility != 'SUSPENDED' &&
+                          incoming().visibility != 'SUSPENDED' &&
+                          incoming().isVerified == existing().isVerified &&
+                          incoming().confirmationsCount == existing().confirmationsCount &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'ownerName', 'name', 'brand', 'district', 'town', 'address', 'phone',
+                            'latitude', 'longitude', 'geohash', 'visibility', 'status',
+                            'stock12_5kg', 'stock5kg', 'stock2_3kg', 'nextArrivalNote',
+                            'queueLevel', 'estimatedQueueCount', 'discrepancyCount', 'updatedAt'
+                          ])) ||
+                         // Action 2: Community crowd confirmation & queue telemetry update (bounded delta)
+                         (existing().visibility == 'PUBLIC' &&
+                          incoming().confirmationsCount >= existing().confirmationsCount &&
+                          incoming().confirmationsCount <= existing().confirmationsCount + 3 &&
+                          incoming().discrepancyCount >= existing().discrepancyCount &&
+                          incoming().discrepancyCount <= existing().discrepancyCount + 3 &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'queueLevel', 'estimatedQueueCount', 'confirmationsCount', 'discrepancyCount', 'updatedAt'
+                          ])) ||
+                         // Action 3: Admin verification, suspension, or moderation override
+                         (isAdmin() &&
+                          incoming().diff(existing()).affectedKeys().hasOnly([
+                            'isVerified', 'visibility', 'status', 'stock12_5kg', 'stock5kg', 'stock2_3kg',
+                            'nextArrivalNote', 'queueLevel', 'estimatedQueueCount',
+                            'confirmationsCount', 'discrepancyCount', 'updatedAt'
+                          ]))
+                       );
+
+      allow delete: if isSignedIn() &&
+                       isValidId(stationId) &&
+                       (existing().ownerId == request.auth.uid || isAdmin());
+    }
+
+    match /stockLogs/{logId} {
+      allow get: if isSignedIn() &&
+                    isValidId(logId) &&
+                    (existing().visibility == 'PUBLIC' || existing().actorId == request.auth.uid || isAdmin());
+
+      allow list: if isSignedIn() &&
+                     (existing().visibility == 'PUBLIC' || existing().actorId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(logId) &&
+                       isValidStockLog(incoming()) &&
+                       incoming().actorId == request.auth.uid &&
+                       incoming().createdAt <= request.time &&
+                       exists(/databases/$(database)/documents/distributors/$(incoming().stationId)) &&
+                       (get(/databases/$(database)/documents/distributors/$(incoming().stationId)).data.ownerId == request.auth.uid || isAdmin());
+
+      allow update, delete: if false;
+    }
+
+    match /queueReports/{reportId} {
+      allow get: if isSignedIn() &&
+                    isValidId(reportId) &&
+                    (existing().moderationState != 'DISMISSED' || existing().userId == request.auth.uid || isAdmin());
+
+      allow list: if isSignedIn() &&
+                     (existing().moderationState == 'ACTIVE' || existing().userId == request.auth.uid || isAdmin());
+
+      allow create: if isSignedIn() &&
+                       isValidId(reportId) &&
+                       isValidQueueReport(incoming()) &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().moderationState == 'ACTIVE' &&
+                       incoming().createdAt <= request.time &&
+                       incoming().updatedAt <= request.time &&
+                       exists(/databases/$(database)/documents/distributors/$(incoming().stationId));
+
+      allow update: if isSignedIn() &&
+                       isValidId(reportId) &&
+                       isValidQueueReport(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().stationId == existing().stationId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().updatedAt <= request.time && (
+                         // Action 1: Community flag on an active report (Terminal Lock: DISMISSED cannot be altered by non-admins)
+                         (existing().moderationState == 'ACTIVE' &&
+                          incoming().moderationState == 'FLAGGED' &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['moderationState', 'updatedAt'])) ||
+                         // Action 2: Admin moderation resolution
+                         (isAdmin() &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['moderationState', 'updatedAt']))
+                       );
+
+      allow delete: if isSignedIn() &&
+                       isValidId(reportId) &&
+                       (existing().userId == request.auth.uid || isAdmin());
+    }
+  }
+}

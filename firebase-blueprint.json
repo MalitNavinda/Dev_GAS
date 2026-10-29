@@ -1,0 +1,378 @@
+{
+  "entities": {
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted administrator membership record.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the administrator."
+        },
+        "grantedBy": {
+          "type": "string",
+          "description": "UID of the administrator who granted access."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "grantedBy", "createdAt"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Owner-isolated user preferences and display metadata.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name shown on user profile."
+        },
+        "preferredLanguage": {
+          "type": "string",
+          "enum": ["EN", "SI", "TA"],
+          "description": "Selected trilingual UI code."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": ["userId", "displayName", "preferredLanguage", "createdAt", "updatedAt"]
+    },
+    "Distributor": {
+      "title": "Distributor",
+      "description": "Litro or LAUGFS LPG distributor outlet with real-time stock and queue telemetry.",
+      "type": "object",
+      "properties": {
+        "ownerId": {
+          "type": "string",
+          "description": "UID of the seller who registered and manages this station."
+        },
+        "ownerName": {
+          "type": "string",
+          "description": "Public business contact name of the dealer."
+        },
+        "name": {
+          "type": "string",
+          "description": "Public outlet name."
+        },
+        "brand": {
+          "type": "string",
+          "enum": ["LITRO", "LAUGFS"],
+          "description": "LPG cylinder brand."
+        },
+        "district": {
+          "type": "string",
+          "description": "Sri Lankan administrative district."
+        },
+        "town": {
+          "type": "string",
+          "description": "Town or suburb name."
+        },
+        "address": {
+          "type": "string",
+          "description": "Street address of the outlet."
+        },
+        "phone": {
+          "type": "string",
+          "description": "Public shop inquiry hotline."
+        },
+        "latitude": {
+          "type": "number",
+          "description": "Geographic latitude."
+        },
+        "longitude": {
+          "type": "number",
+          "description": "Geographic longitude."
+        },
+        "geohash": {
+          "type": "string",
+          "description": "6-character geohash for spatial lookup."
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["PUBLIC", "PRIVATE", "SUSPENDED"],
+          "description": "Listing visibility enforced by Firestore rules."
+        },
+        "isVerified": {
+          "type": "boolean",
+          "description": "Whether an administrator has verified this official dealership."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["SCHEDULED", "IN_TRANSIT", "AVAILABLE", "SOLD_OUT"],
+          "description": "Current stock lifecycle state."
+        },
+        "stock12_5kg": {
+          "type": "integer",
+          "description": "Available 12.5 kg domestic cylinders."
+        },
+        "stock5kg": {
+          "type": "integer",
+          "description": "Available 5.0 kg medium cylinders."
+        },
+        "stock2_3kg": {
+          "type": "integer",
+          "description": "Available 2.3 kg / 2.0 kg compact cylinders."
+        },
+        "nextArrivalNote": {
+          "type": "string",
+          "description": "Expected lorry ETA or dispatch note."
+        },
+        "queueLevel": {
+          "type": "string",
+          "enum": ["NONE", "SHORT", "MODERATE", "LONG"],
+          "description": "Current queue congestion severity."
+        },
+        "estimatedQueueCount": {
+          "type": "integer",
+          "description": "Estimated number of people waiting in line."
+        },
+        "confirmationsCount": {
+          "type": "integer",
+          "description": "Weighted community confirmations count."
+        },
+        "discrepancyCount": {
+          "type": "integer",
+          "description": "Weighted conflicting crowd reports count."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "ownerId", "ownerName", "name", "brand", "district", "town", "address", "phone",
+        "latitude", "longitude", "geohash", "visibility", "isVerified", "status",
+        "stock12_5kg", "stock5kg", "stock2_3kg", "nextArrivalNote", "queueLevel",
+        "estimatedQueueCount", "confirmationsCount", "discrepancyCount", "createdAt", "updatedAt"
+      ]
+    },
+    "StockLog": {
+      "title": "StockLog",
+      "description": "Immutable append-only audit log of stock and status transitions.",
+      "type": "object",
+      "properties": {
+        "stationId": {
+          "type": "string",
+          "description": "Referenced distributor document ID."
+        },
+        "actorId": {
+          "type": "string",
+          "description": "UID of the seller or admin who performed the update."
+        },
+        "stationName": {
+          "type": "string",
+          "description": "Snapshot of station name."
+        },
+        "brand": {
+          "type": "string",
+          "enum": ["LITRO", "LAUGFS"],
+          "description": "LPG brand."
+        },
+        "previousStatus": {
+          "type": "string",
+          "enum": ["SCHEDULED", "IN_TRANSIT", "AVAILABLE", "SOLD_OUT"],
+          "description": "Status before transition."
+        },
+        "newStatus": {
+          "type": "string",
+          "enum": ["SCHEDULED", "IN_TRANSIT", "AVAILABLE", "SOLD_OUT"],
+          "description": "Status after transition."
+        },
+        "stock12_5kg": {
+          "type": "integer",
+          "description": "Updated 12.5kg count."
+        },
+        "stock5kg": {
+          "type": "integer",
+          "description": "Updated 5kg count."
+        },
+        "stock2_3kg": {
+          "type": "integer",
+          "description": "Updated 2.3kg count."
+        },
+        "note": {
+          "type": "string",
+          "description": "Update summary note."
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["PUBLIC", "PRIVATE"],
+          "description": "Audit log visibility."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "stationId", "actorId", "stationName", "brand", "previousStatus", "newStatus",
+        "stock12_5kg", "stock5kg", "stock2_3kg", "note", "visibility", "createdAt"
+      ]
+    },
+    "QueueReport": {
+      "title": "QueueReport",
+      "description": "Crowdsourced live queue and stock confirmation report submitted by consumers.",
+      "type": "object",
+      "properties": {
+        "stationId": {
+          "type": "string",
+          "description": "Target distributor document ID."
+        },
+        "stationName": {
+          "type": "string",
+          "description": "Target distributor name."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Author Firebase Auth UID."
+        },
+        "reporterAlias": {
+          "type": "string",
+          "description": "Short public display alias of reporter."
+        },
+        "reportedStatus": {
+          "type": "string",
+          "enum": ["AVAILABLE", "LOW_STOCK", "SOLD_OUT"],
+          "description": "Crowd-observed cylinder availability."
+        },
+        "queueLevel": {
+          "type": "string",
+          "enum": ["NONE", "SHORT", "MODERATE", "LONG"],
+          "description": "Crowd-observed queue congestion."
+        },
+        "queueLengthEstimate": {
+          "type": "integer",
+          "description": "Estimated people waiting in queue."
+        },
+        "isProximityVerified": {
+          "type": "boolean",
+          "description": "True when reporter GPS was within 1.5km of outlet."
+        },
+        "weight": {
+          "type": "integer",
+          "description": "Trust weight multiplier (1..3)."
+        },
+        "moderationState": {
+          "type": "string",
+          "enum": ["ACTIVE", "FLAGGED", "DISMISSED"],
+          "description": "Moderation status."
+        },
+        "comment": {
+          "type": "string",
+          "description": "Short helpful note from the queue."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "stationId", "stationName", "userId", "reporterAlias", "reportedStatus",
+        "queueLevel", "queueLengthEstimate", "isProximityVerified", "weight",
+        "moderationState", "comment", "createdAt", "updatedAt"
+      ]
+    },
+    "WatchlistItem": {
+      "title": "WatchlistItem",
+      "description": "Per-user station subscription for nearby restock alerts.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID."
+        },
+        "stationId": {
+          "type": "string",
+          "description": "Subscribed distributor document ID."
+        },
+        "stationName": {
+          "type": "string",
+          "description": "Subscribed distributor name."
+        },
+        "brand": {
+          "type": "string",
+          "enum": ["LITRO", "LAUGFS"],
+          "description": "LPG brand."
+        },
+        "desiredSize": {
+          "type": "string",
+          "enum": ["ANY", "12_5KG", "5KG", "2_3KG"],
+          "description": "Target cylinder size filter for alerts."
+        },
+        "lastKnownStatus": {
+          "type": "string",
+          "enum": ["SCHEDULED", "IN_TRANSIT", "AVAILABLE", "SOLD_OUT"],
+          "description": "Last notified status to avoid duplicate alerts."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server creation timestamp (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server update timestamp (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId", "stationId", "stationName", "brand", "desiredSize",
+        "lastKnownStatus", "createdAt", "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Trusted administrator registry."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Owner-isolated user preferences."
+    },
+    "/users/{userId}/watchlist/{stationId}": {
+      "schema": { "$ref": "#/entities/WatchlistItem" },
+      "description": "Private user restock alert subscriptions."
+    },
+    "/distributors/{stationId}": {
+      "schema": { "$ref": "#/entities/Distributor" },
+      "description": "Real-time LPG distributor locations, cylinder stock, and queue telemetry."
+    },
+    "/stockLogs/{logId}": {
+      "schema": { "$ref": "#/entities/StockLog" },
+      "description": "Immutable append-only stock update audit trail."
+    },
+    "/queueReports/{reportId}": {
+      "schema": { "$ref": "#/entities/QueueReport" },
+      "description": "Crowdsourced consumer queue and stock confirmation reports."
+    }
+  }
+}

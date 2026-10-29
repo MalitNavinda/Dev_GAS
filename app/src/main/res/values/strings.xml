@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">LankaGas Live</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="hero_banner_desc">Sri Lanka LPG cylinder distribution map illustration</string>
+    <string name="notif_channel_name">Nearby LPG Restock Alerts</string>
+    <string name="notif_channel_desc">Real-time alerts when watched Litro or LAUGFS stations receive cylinder stock</string>
+    <string name="cd_language_switcher">Switch application language</string>
+    <string name="cd_notifications">View restock alerts</string>
+    <string name="cd_sign_out">Sign out of account</string>
+    <string name="cd_gps_locate">Detect current GPS location</string>
+    <string name="cd_clear_search">Clear search query</string>
+    <string name="cd_close_detail">Close station details</string>
+</resources>
